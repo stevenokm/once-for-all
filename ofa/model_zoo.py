@@ -121,6 +121,7 @@ def ofa_net_cifar10(net_id, pretrained=True):
             ks_list=[3, 5],
             expand_ratio_list=[2, 4],
             depth_list=[2, 3],
+            small=True,
         )
     elif net_id == "ofa_mbv3_d23_e24_k35_w1.2":
         net = cifar10_elastic_nn.OFAMobileNetV3(
@@ -129,6 +130,7 @@ def ofa_net_cifar10(net_id, pretrained=True):
             ks_list=[3, 5],
             expand_ratio_list=[2, 4],
             depth_list=[2, 3],
+            small=True,
         )
     # elif net_id == "ofa_resnet8":
     #     net = cifar10_elastic_nn.OFAResNets(
