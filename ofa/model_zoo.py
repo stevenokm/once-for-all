@@ -116,7 +116,7 @@ def ofa_net_cifar10(net_id, pretrained=True):
     # elif net_id == "ofa_mbv3_d23_e24_k35_w1.0":
     if net_id == "ofa_mbv3_d23_e24_k35_w1.0":
         net = cifar10_elastic_nn.OFAMobileNetV3(
-            dropout_rate=0,
+            dropout_rate=0.2,
             width_mult=1.0,
             ks_list=[3, 5],
             expand_ratio_list=[2, 4],
