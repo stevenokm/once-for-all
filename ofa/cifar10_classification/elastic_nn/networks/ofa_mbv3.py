@@ -32,6 +32,7 @@ class OFAMobileNetV3(MobileNetV3):
         ks_list=3,
         expand_ratio_list=6,
         depth_list=4,
+        small=False,
     ):
 
         self.width_mult = width_mult
@@ -44,6 +45,8 @@ class OFAMobileNetV3(MobileNetV3):
         self.depth_list.sort()
 
         base_stage_width = [16, 16, 24, 40, 80, 112, 160, 960, 1280]
+        if small:
+            base_stage_width = [16, 16, 24, 40, 48, 96, 576, 1024]
 
         final_expand_width = make_divisible(
             base_stage_width[-2] * self.width_mult, MyNetwork.CHANNEL_DIVISIBLE
@@ -53,8 +56,14 @@ class OFAMobileNetV3(MobileNetV3):
         )
 
         stride_stages = [1, 2, 2, 2, 1, 2]
+        if small:
+            stride_stages = [1, 2, 2, 1, 2]
         act_stages = ["relu", "relu", "relu", "h_swish", "h_swish", "h_swish"]
+        if small:
+            act_stages = ["relu", "relu", "h_swish", "h_swish", "h_swish"]
         se_stages = [False, False, True, False, True, True]
+        if small:
+            se_stages = [True, False, True, True, True]
         n_block_list = [1] + [max(self.depth_list)] * 5
         width_list = []
         for base_width in base_stage_width[:-2]:

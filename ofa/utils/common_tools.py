@@ -235,7 +235,7 @@ class MultiClassAverageMeter:
             target = targets[:, k]
 
             x = output + 2 * target
-            bincount = np.bincount(x.astype(np.int32), minlength=2 ** 2)
+            bincount = np.bincount(x.astype(np.int32), minlength=2**2)
 
             self.counts[k] += bincount.reshape((2, 2))
 

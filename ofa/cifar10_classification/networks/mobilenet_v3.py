@@ -1,6 +1,7 @@
 # Once for All: Train One Network and Specialize it for Efficient Deployment
 # Han Cai, Chuang Gan, Tianzhe Wang, Zhekai Zhang, Song Han
 # International Conference on Learning Representations (ICLR), 2020.
+# MobileNetV3Small from https://github.com/ShowLo/MobileNetV3
 
 import copy
 import torch.nn as nn
@@ -15,7 +16,7 @@ from ofa.utils.layers import (
 )
 from ofa.utils import MyNetwork, make_divisible, MyGlobalAvgPool2d
 
-__all__ = ["MobileNetV3", "MobileNetV3Large"]
+__all__ = ["MobileNetV3", "MobileNetV3Large", "MobileNetV3Small"]
 
 
 class MobileNetV3(MyNetwork):
@@ -27,7 +28,8 @@ class MobileNetV3(MyNetwork):
         self.first_conv = first_conv
         self.blocks = nn.ModuleList(blocks)
         self.final_expand_layer = final_expand_layer
-        self.global_avg_pool = MyGlobalAvgPool2d(keep_dim=True)
+        # self.global_avg_pool = MyGlobalAvgPool2d(keep_dim=True)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
         self.feature_mix_layer = feature_mix_layer
         self.classifier = classifier
 
@@ -108,13 +110,15 @@ class MobileNetV3(MyNetwork):
         return info_list
 
     @staticmethod
-    def build_net_via_cfg(cfg, input_channel, last_channel, n_classes, dropout_rate):
+    def build_net_via_cfg(
+        cfg, input_channel, last_channel, n_classes, dropout_rate, stride=2
+    ):
         # first conv layer
         first_conv = ConvLayer(
             3,
             input_channel,
             kernel_size=3,
-            stride=2,
+            stride=stride,
             use_bn=True,
             act_func="h_swish",
             ops_order="weight_bn_act",
@@ -235,7 +239,7 @@ class MobileNetV3Large(MobileNetV3):
                 [3, 16, 16, False, "relu", 1, 1],
             ],
             "1": [
-                [3, 36, 24, False, "relu", 2, None],  # 4
+                [3, 64, 24, False, "relu", 2, None],  # 4
                 [3, 72, 24, False, "relu", 1, None],  # 3
             ],
             "2": [
@@ -250,13 +254,13 @@ class MobileNetV3Large(MobileNetV3):
                 [3, 184, 80, False, "h_swish", 1, None],  # 2.3
             ],
             "4": [
-                [3, 240, 100, True, "h_swish", 1, None],  # 6
-                [3, 300, 100, True, "h_swish", 1, None],  # 6
+                [3, 480, 112, True, "h_swish", 1, None],  # 6
+                [3, 672, 112, True, "h_swish", 1, None],  # 6
             ],
             "5": [
-                [5, 360, 120, True, "h_swish", 2, None],  # 6
-                [5, 420, 120, True, "h_swish", 1, None],  # 6
-                [5, 420, 120, True, "h_swish", 1, None],  # 6
+                [5, 672, 160, True, "h_swish", 2, None],  # 6
+                [5, 960, 160, True, "h_swish", 1, None],  # 6
+                [5, 960, 160, True, "h_swish", 1, None],  # 6
             ],
         }
 
@@ -282,6 +286,83 @@ class MobileNetV3Large(MobileNetV3):
             cfg, input_channel, last_channel, n_classes, dropout_rate
         )
         super(MobileNetV3Large, self).__init__(
+            first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
+        )
+        # set bn param
+        self.set_bn_param(*bn_param)
+
+
+class MobileNetV3Small(MobileNetV3):
+    def __init__(
+        self,
+        n_classes=10,
+        width_mult=1.0,
+        bn_param=(0.1, 1e-5),
+        dropout_rate=0.2,
+        ks=None,
+        expand_ratio=None,
+        depth_param=None,
+        stage_width_list=None,
+    ):
+        input_channel = 16
+        last_channel = 1024
+
+        input_channel = make_divisible(
+            input_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE
+        )
+        last_channel = (
+            make_divisible(last_channel * width_mult, MyNetwork.CHANNEL_DIVISIBLE)
+            if width_mult > 1.0
+            else last_channel
+        )
+
+        cfg = {
+            #    k,     exp,    c,      se,         nl,         s,      e,
+            "0": [
+                [3, 16, 16, True, "relu", 1, 1],
+            ],
+            "1": [
+                [3, 72, 24, False, "relu", 2, None],
+                [3, 88, 24, False, "relu", 1, None],
+            ],
+            "2": [
+                [5, 96, 40, True, "h_swish", 2, None],
+                [5, 240, 40, True, "h_swish", 1, None],
+                [5, 240, 40, True, "h_swish", 1, None],
+            ],
+            "3": [
+                [5, 120, 48, True, "h_swish", 1, None],
+                [5, 144, 48, True, "h_swish", 1, None],
+            ],
+            "4": [
+                [5, 288, 96, True, "h_swish", 2, None],
+                [5, 576, 96, True, "h_swish", 1, None],
+                [5, 576, 96, True, "h_swish", 1, None],
+            ],
+        }
+
+        cfg = self.adjust_cfg(cfg, ks, expand_ratio, depth_param, stage_width_list)
+        # width multiplier on mobile setting, change `exp: 1` and `c: 2`
+        for stage_id, block_config_list in cfg.items():
+            for block_config in block_config_list:
+                if block_config[1] is not None:
+                    block_config[1] = make_divisible(
+                        block_config[1] * width_mult, MyNetwork.CHANNEL_DIVISIBLE
+                    )
+                block_config[2] = make_divisible(
+                    block_config[2] * width_mult, MyNetwork.CHANNEL_DIVISIBLE
+                )
+
+        (
+            first_conv,
+            blocks,
+            final_expand_layer,
+            feature_mix_layer,
+            classifier,
+        ) = self.build_net_via_cfg(
+            cfg, input_channel, last_channel, n_classes, dropout_rate, stride=1
+        )
+        super(MobileNetV3Small, self).__init__(
             first_conv, blocks, final_expand_layer, feature_mix_layer, classifier
         )
         # set bn param

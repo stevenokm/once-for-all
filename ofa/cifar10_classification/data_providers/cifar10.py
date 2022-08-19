@@ -193,7 +193,7 @@ class Cifar10DataProvider(DataProvider):
     @property
     def normalize(self):
         return transforms.Normalize(
-            mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010]
+            mean=[0.4914, 0.4822, 0.4465], std=[0.2470, 0.2435, 0.2616]
         )
 
     def build_train_transform(self, image_size=None, print_log=True):
@@ -205,23 +205,9 @@ class Cifar10DataProvider(DataProvider):
                 % (self.distort_color, self.resize_scale, image_size)
             )
 
-        if isinstance(image_size, list):
-            resize_transform_class = MyRandomResizedCrop
-            print(
-                "Use MyRandomResizedCrop: %s, \t %s"
-                % MyRandomResizedCrop.get_candidate_image_size(),
-                "sync=%s, continuous=%s"
-                % (
-                    MyRandomResizedCrop.SYNC_DISTRIBUTED,
-                    MyRandomResizedCrop.CONTINUOUS,
-                ),
-            )
-        else:
-            resize_transform_class = transforms.RandomResizedCrop
-
-        # random_resize_crop -> random_horizontal_flip
+        # random_crop -> random_horizontal_flip
         train_transforms = [
-            resize_transform_class(image_size, scale=(self.resize_scale, 1.0)),
+            transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
         ]
 
@@ -251,8 +237,6 @@ class Cifar10DataProvider(DataProvider):
             image_size = self.active_img_size
         return transforms.Compose(
             [
-                transforms.Resize(int(math.ceil(image_size / 0.875))),
-                transforms.CenterCrop(image_size),
                 transforms.ToTensor(),
                 self.normalize,
             ]

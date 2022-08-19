@@ -56,7 +56,8 @@ class DistributedRunManager:
         os.makedirs(self.path, exist_ok=True)
 
         self.net.cuda()
-        cudnn.benchmark = True
+        cudnn.benchmark = False
+        cudnn.deterministic = True
         if init and self.is_root:
             init_models(self.net, self.run_config.model_init)
         if self.is_root:

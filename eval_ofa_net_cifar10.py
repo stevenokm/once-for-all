@@ -51,7 +51,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 args.batch_size = args.batch_size * max(len(device_list), 1)
 Cifar10DataProvider.DEFAULT_PATH = args.path
 
-ofa_network = ofa_net_cifar10(args.net, pretrained=False)       
+ofa_network = ofa_net_cifar10(args.net, pretrained=False)
 ofa_checkpoint_path = "exp/kernel_depth2kernel_depth_width/phase2"
 ofa_checkpoint_path = os.path.join(ofa_checkpoint_path, "checkpoint/model_best.pth.tar")
 init = torch.load(ofa_checkpoint_path)["state_dict"]

@@ -8,6 +8,7 @@ import torch
 import random
 import os
 from collections import namedtuple
+
 # from torch._six import queue
 from torch.multiprocessing import Queue as queue
 from torch._utils import ExceptionWrapper
@@ -56,7 +57,6 @@ if IS_WINDOWS:
                     self.kernel32.WaitForSingleObject(self.manager_handle, 0) == 0
                 )
             return not self.manager_dead
-
 
 else:
 

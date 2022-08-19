@@ -118,3 +118,7 @@ venv.bak/
 exp*/
 log/
 .tmp/
+ofa_*/
+
+# tags
+tags
